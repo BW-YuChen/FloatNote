@@ -1,0 +1,28 @@
+<Window x:Class="FloatNote.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+        Title="浮笺"
+        Width="760" Height="520"
+        MinWidth="340" MinHeight="240"
+        WindowStyle="None"
+        ResizeMode="CanResize"
+        AllowsTransparency="False"
+        ShowInTaskbar="True"
+        WindowStartupLocation="Manual"
+        Background="#FBFBFA"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True">
+
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="0"
+                      ResizeBorderThickness="6"
+                      GlassFrameThickness="0"
+                      CornerRadius="0"
+                      UseAeroCaptionButtons="False" />
+    </WindowChrome.WindowChrome>
+
+    <Grid x:Name="RootGrid" Background="#FBFBFA">
+        <wv2:WebView2 x:Name="Web" Margin="6" />
+    </Grid>
+</Window>

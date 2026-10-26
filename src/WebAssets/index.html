@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>浮笺</title>
+<link rel="stylesheet" href="/vditor/dist/index.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<div id="app">
+
+  <header id="titlebar" class="titlebar">
+    <div class="tb-left">
+      <span class="brand">浮笺</span>
+      <button id="btnPin" class="chip chip-pin" title="固定置顶：锁定在所有窗口之上">✧ 固定</button>
+      <button id="btnLevel" class="chip" title="切换窗口层级（置顶 / 普通 / 贴桌面）">
+        <span id="levelText">置顶</span>
+      </button>
+    </div>
+    <div class="tb-right">
+      <button id="btnSidebar" class="ic" title="收起 / 展开便签栏">≡</button>
+      <button id="btnTheme" class="ic" title="切换配色（浅色 / 深色 / 跟随系统）">◐</button>
+      <button id="btnMin" class="ic" title="最小化">–</button>
+      <button id="btnHide" class="ic" title="隐藏到托盘">×</button>
+    </div>
+  </header>
+
+  <div class="workspace">
+    <aside id="sidebar" class="sidebar">
+      <div class="side-head">
+        <div class="side-tabs">
+          <button id="tabNotes" class="side-tab is-on" type="button">便签</button>
+          <button id="tabRemind" class="side-tab" type="button">提醒<span id="remindCount" class="tab-count" hidden></span></button>
+        </div>
+        <button id="btnNew" class="new-btn" title="新建便签">＋</button>
+      </div>
+      <div id="catBar" class="cat-bar"></div>
+      <div id="noteList" class="note-list"></div>
+      <div id="remindList" class="note-list rem-list" hidden></div>
+    </aside>
+
+    <main class="main">
+      <div id="editor" class="editor"></div>
+      <div id="linkLayer" class="link-layer" aria-hidden="true"></div>
+      <div id="emptyState" class="empty" hidden>
+        <p class="empty-title">还没有便签</p>
+        <button id="btnEmptyNew" class="empty-btn">新建一条</button>
+      </div>
+    </main>
+  </div>
+
+  <footer class="statusbar">
+    <span id="statusSave" class="st">已就绪</span>
+    <span id="statusCount" class="st">0 字</span>
+    <span class="spacer"></span>
+    <button id="btnHL" class="mini" title="日期 / 时间 / 地点自动底色">高亮</button>
+    <button id="btnLK" class="mini" title="命中其它便签标题时提示建立链接">链接</button>
+    <span id="statusHint" class="st st-hint">Ctrl+N 新建 · Ctrl+S 保存 · Ctrl+滚轮 字号</span>
+  </footer>
+
+</div>
+
+<div id="newMenu" class="pop" hidden>
+  <button class="pop-item" data-kind="">
+    <span class="pop-ico">📄</span>
+    <span class="pop-txt"><b>普通便签</b><i>空白 Markdown</i></span>
+  </button>
+  <button class="pop-item" data-kind="weekly">
+    <span class="pop-ico">📅</span>
+    <span class="pop-txt"><b>每周待办</b><i>按本周一至周日分组</i></span>
+  </button>
+</div>
+
+<div id="markPalette" class="pop palette" hidden>
+  <div class="pal-title">分类标记</div>
+  <div id="palEmoji" class="pal-grid"></div>
+  <div class="pal-title pal-title-sub">颜色</div>
+  <div id="palColor" class="pal-colors"></div>
+  <button id="palClear" class="pal-clear">清除标记</button>
+</div>
+
+<div id="remDialog" class="modal" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true">
+    <div class="modal-head">添加提醒</div>
+    <div class="modal-body">
+      <label class="fld">
+        <span>时间</span>
+        <input id="remWhen" type="datetime-local">
+      </label>
+      <label class="fld">
+        <span>内容</span>
+        <input id="remText" type="text" maxlength="80" placeholder="提醒我…">
+      </label>
+      <div id="remHint" class="fld-hint"></div>
+    </div>
+    <div class="modal-foot">
+      <button id="remCancel" class="btn" type="button">取消</button>
+      <button id="remSave" class="btn btn-primary" type="button">添加提醒</button>
+    </div>
+  </div>
+</div>
+
+<script src="/vditor/dist/index.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

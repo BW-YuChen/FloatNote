@@ -1,0 +1,982 @@
+/* ---------- 主题变量：两套配色，同一套层级 ---------- */
+:root {
+  --ui-font: "Segoe UI", "Microsoft YaHei UI", "PingFang SC", system-ui, sans-serif;
+  --mono-font: "Cascadia Mono", "Cascadia Code", Consolas, "Courier New", monospace;
+
+  --fs-ui: 12px;
+  --fs-editor: 14px;
+  --fs-small: 11px;
+
+  --tb-h: 34px;
+  --sb-h: 22px;
+  --side-w: 170px;
+}
+
+html[data-theme="light"] {
+  --bg: #fbfbfa;
+  --bg-2: #f4f4f2;
+  --bg-3: #ebeae7;
+  --fg: #1e1e1c;
+  --fg-2: #6e6e68;
+  --fg-3: #a3a39d;
+  --line: #e7e6e2;
+  --line-strong: #d7d6d1;
+  --sel: #e3e2de;
+  --link: #2f6fd0;
+  --mark-bg: #fbe6a2;
+  --mark-fg: #4a3a08;
+  --danger: #d0453a;
+  --pop-shadow: 0 10px 28px rgba(30, 30, 28, .13), 0 1px 2px rgba(30, 30, 28, .08);
+}
+
+html[data-theme="dark"] {
+  --bg: #181817;
+  --bg-2: #1f1f1e;
+  --bg-3: #282827;
+  --fg: #ecebe7;
+  --fg-2: #9c9c95;
+  --fg-3: #6e6e68;
+  --line: #2b2b29;
+  --line-strong: #3a3a37;
+  --sel: #32322f;
+  --link: #74a9ea;
+  --mark-bg: #6b5a1e;
+  --mark-fg: #ffe9a8;
+  --danger: #ff7b6b;
+  --pop-shadow: 0 12px 32px rgba(0, 0, 0, .55), 0 1px 2px rgba(0, 0, 0, .4);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--ui-font);
+  font-size: var(--fs-ui);
+  -webkit-font-smoothing: antialiased;
+}
+
+body { user-select: none; }
+
+#app {
+  height: 100%;
+  display: grid;
+  grid-template-rows: var(--tb-h) 1fr var(--sb-h);
+}
+
+/* ---------- 标题栏 ---------- */
+.titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px 0 14px;
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--line);
+  cursor: default;
+}
+
+.tb-left, .tb-right { display: flex; align-items: center; gap: 6px; }
+
+.brand {
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  color: var(--fg-2);
+  margin-right: 6px;
+  -webkit-app-region: no-drag;
+}
+
+.chip {
+  font-family: inherit;
+  font-size: var(--fs-small);
+  color: var(--fg-2);
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  border-radius: 5px;
+  padding: 2px 8px;
+  cursor: pointer;
+  line-height: 1.5;
+  transition: color .12s, border-color .12s;
+}
+.chip:hover { color: var(--fg); border-color: var(--fg-3); }
+.chip.is-pinned { color: var(--fg); border-color: var(--fg-3); }
+
+.chip-pin { letter-spacing: 0.02em; }
+.chip-pin.is-on {
+  color: var(--bg);
+  background: var(--fg-2);
+  border-color: var(--fg-2);
+}
+
+.ic {
+  width: 24px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--fg-2);
+  background: transparent;
+  border: 0;
+  border-radius: 5px;
+  cursor: pointer;
+  padding: 0;
+}
+.ic:hover { background: var(--bg-3); color: var(--fg); }
+
+/* ---------- 工作区 ---------- */
+.workspace {
+  display: grid;
+  grid-template-columns: var(--side-w) 1fr;
+  min-height: 0;
+  overflow: hidden;
+}
+.workspace.no-side { grid-template-columns: 1fr; }
+.workspace.no-side .sidebar { display: none; }
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--bg-2);
+  border-right: 1px solid var(--line);
+  padding: 6px 0 8px;
+}
+
+.side-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px 4px 12px;
+}
+
+.side-label {
+  font-size: var(--fs-small);
+  color: var(--fg-3);
+  letter-spacing: 0.12em;
+}
+
+.side-tabs { display: flex; align-items: center; gap: 1px; }
+
+.side-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: inherit;
+  font-size: var(--fs-small);
+  color: var(--fg-3);
+  background: transparent;
+  border: 0;
+  border-radius: 5px;
+  padding: 3px 8px;
+  cursor: pointer;
+  line-height: 1.5;
+}
+.side-tab:hover { color: var(--fg-2); }
+.side-tab.is-on { color: var(--fg); background: var(--bg-3); }
+
+.tab-count {
+  min-width: 13px;
+  height: 13px;
+  padding: 0 3px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  line-height: 1;
+  border-radius: 7px;
+  background: var(--fg-2);
+  color: var(--bg);
+}
+.tab-count[hidden] { display: none; }
+
+.new-btn {
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--fg-2);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+.new-btn:hover { background: var(--bg-3); color: var(--fg); }
+
+.cat-bar {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 4px;
+  padding: 0 8px 6px 10px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+.cat-bar::-webkit-scrollbar { height: 0; }
+.cat-bar[hidden] { display: none; }
+
+.cat-chip {
+  flex: none;
+  font-family: inherit;
+  font-size: var(--fs-small);
+  line-height: 1.6;
+  color: var(--fg-3);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 0 7px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.cat-chip:hover { color: var(--fg-2); background: var(--bg-3); }
+.cat-chip.is-on { color: var(--fg); border-color: var(--line-strong); }
+
+.note-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 6px;
+}
+
+.note-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 6px 5px 7px;
+  margin-bottom: 1px;
+  border-radius: 5px;
+  cursor: pointer;
+  position: relative;
+}
+.note-item:hover { background: var(--bg-3); }
+.note-item.is-active { background: var(--sel); }
+.note-item.is-active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--fg);
+}
+.note-item.is-pinned { order: -1; }
+
+.note-mark {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  line-height: 1;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--fg-3);
+  cursor: pointer;
+  padding: 0;
+}
+.note-mark:hover { background: var(--bg); }
+.note-mark .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: block;
+}
+.note-mark.is-none { opacity: 0; }
+.note-item:hover .note-mark.is-none { opacity: .55; }
+
+.note-title {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fs-ui);
+  color: var(--fg-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.note-item.is-active .note-title { color: var(--fg); }
+
+.note-pin, .note-del {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--fg-3);
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  padding: 0;
+}
+.note-pin { font-size: 9px; }
+.note-item:hover .note-pin, .note-item:hover .note-del { opacity: 1; }
+.note-item.is-pinned .note-pin { opacity: 1; color: var(--fg); }
+.note-pin:hover, .note-del:hover { background: var(--bg); color: var(--fg); }
+.note-pin.is-on { color: var(--fg); }
+
+.note-empty {
+  padding: 14px 10px;
+  font-size: var(--fs-small);
+  color: var(--fg-3);
+  text-align: center;
+}
+
+/* ---------- 提醒列表 ---------- */
+.rem-list { padding: 4px 6px 0; }
+
+.rem-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 22px 6px 8px;
+  margin-bottom: 1px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.rem-item:hover { background: var(--bg-3); }
+
+.rem-top { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+
+.rem-when {
+  flex: none;
+  font-size: var(--fs-small);
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
+}
+.rem-note {
+  min-width: 0;
+  font-size: 10px;
+  color: var(--fg-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rem-text {
+  font-size: var(--fs-ui);
+  color: var(--fg-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rem-item.is-fired .rem-when { color: var(--fg-3); }
+.rem-item.is-fired .rem-text {
+  color: var(--fg-3);
+  text-decoration: line-through;
+  text-decoration-color: var(--fg-3);
+}
+
+.rem-del {
+  position: absolute;
+  right: 4px;
+  top: 5px;
+  width: 16px;
+  height: 16px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--fg-3);
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  padding: 0;
+}
+.rem-item:hover .rem-del { opacity: 1; }
+.rem-del:hover { background: var(--bg); color: var(--fg); }
+
+.rem-empty {
+  padding: 16px 10px;
+  font-size: var(--fs-small);
+  color: var(--fg-3);
+  text-align: center;
+  line-height: 1.9;
+}
+
+.note-rename {
+  flex: 1;
+  min-width: 0;
+  font-family: inherit;
+  font-size: var(--fs-ui);
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  padding: 1px 4px;
+  outline: none;
+}
+
+/* ---------- 编辑区 ---------- */
+.main { position: relative; min-width: 0; min-height: 0; overflow: hidden; }
+
+.editor { position: absolute; inset: 0; }
+
+.empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: var(--bg);
+}
+.empty[hidden] { display: none; }
+.empty-title { margin: 0; font-size: 12px; color: var(--fg-3); letter-spacing: 0.08em; }
+.empty-btn {
+  font-family: inherit;
+  font-size: var(--fs-small);
+  color: var(--fg-2);
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  border-radius: 5px;
+  padding: 3px 10px;
+  cursor: pointer;
+}
+.empty-btn:hover { color: var(--fg); border-color: var(--fg-3); }
+
+/* ---------- 状态栏 ---------- */
+.statusbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 12px;
+  background: var(--bg-2);
+  border-top: 1px solid var(--line);
+  font-size: var(--fs-small);
+  color: var(--fg-3);
+  overflow: hidden;
+  white-space: nowrap;
+}
+.spacer { flex: 1; }
+.st-hint { color: var(--fg-3); opacity: .8; }
+.statusbar .saving { color: var(--fg-2); }
+
+/* ---------- 滚动条 ---------- */
+::-webkit-scrollbar { width: 9px; height: 9px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border-radius: 5px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--fg-3); background-clip: content-box; }
+
+/* ---------- Vditor 适配：去掉边框与工具栏，融入极简外框 ---------- */
+.vditor {
+  --panel-background-color: var(--bg-2);
+  --toolbar-background-color: var(--bg-2);
+  --toolbar-icon-color: var(--fg-2);
+  --toolbar-icon-hover-color: var(--fg);
+  --textarea-background-color: var(--bg);
+  --textarea-text-color: var(--fg);
+  --border-color: var(--line);
+  --second-color: var(--fg-2);
+  --blockquote-color: var(--fg-2);
+  --blockquote-border-color: var(--line-strong);
+  --blockquote-text-color: var(--fg-2);
+  --heading-border-color: var(--line);
+  --ir-heading-color: var(--fg);
+  --ir-title-color: var(--fg);
+  --ir-bi-color: var(--fg-2);
+  --ir-link-color: var(--fg);
+  --ir-bracket-color: var(--fg-3);
+  --ir-paren-color: var(--fg-3);
+
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: var(--bg) !important;
+  height: 100% !important;
+}
+
+.vditor .vditor-toolbar { display: none !important; }
+.vditor .vditor-resize { display: none !important; }
+
+.vditor-ir, .vditor-ir .vditor-reset {
+  background: var(--bg) !important;
+  color: var(--fg) !important;
+}
+
+.vditor-ir pre.vditor-reset {
+  padding: 18px 26px 56px !important;
+  margin: 0 !important;
+  font-family: var(--ui-font) !important;
+  font-size: var(--fs-editor) !important;
+  line-height: 1.78 !important;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.vditor-reset h1, .vditor-reset h2, .vditor-reset h3,
+.vditor-reset h4, .vditor-reset h5, .vditor-reset h6 {
+  color: var(--fg);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+.vditor-reset h1 { font-size: 1.55em; margin: 0.7em 0 0.5em; }
+.vditor-reset h2 { font-size: 1.28em; }
+.vditor-reset h3 { font-size: 1.12em; }
+
+/* 标题下的分隔线跟随主题；只有一级标题保留分隔线，二级以下不带线，避免密集分节时显得碎 */
+.vditor-ir .vditor-reset h1 {
+  border-bottom: 1px solid var(--line) !important;
+  padding-bottom: 0.2em;
+}
+.vditor-ir .vditor-reset h2,
+.vditor-ir .vditor-reset h3,
+.vditor-ir .vditor-reset h4,
+.vditor-ir .vditor-reset h5,
+.vditor-ir .vditor-reset h6 {
+  border-bottom: 0 !important;
+}
+
+.vditor-reset code:not(.hljs), .vditor-reset code {
+  font-family: var(--mono-font);
+  font-size: 0.92em;
+}
+
+.vditor-reset pre > code {
+  border-radius: 6px;
+}
+
+.vditor-reset blockquote {
+  border-left: 2px solid var(--line-strong);
+  color: var(--fg-2);
+  padding-left: 12px;
+  margin-left: 0;
+}
+
+/* 行内代码：vditor 深色主题给的是蓝色底，与极简配色冲突，统一为中性色块 */
+.vditor-ir .vditor-reset code:not(.hljs) {
+  background: var(--bg-3) !important;
+  color: var(--fg) !important;
+  border: 0 !important;
+  border-radius: 4px !important;
+  padding: 1px 5px !important;
+  font-size: 0.9em !important;
+}
+
+.vditor-ir .vditor-reset table { border-collapse: collapse; }
+.vditor-reset table th, .vditor-reset table td {
+  border: 1px solid var(--line-strong);
+  padding: 5px 10px;
+}
+
+.vditor-reset a { color: var(--fg); text-decoration-color: var(--fg-3); }
+
+.vditor-ir__marker { color: var(--fg-3) !important; }
+/* 折叠态的 Markdown 记号不参与布局，避免溢出到行外被裁切 */
+.vditor-ir__node:not(.vditor-ir__node--expand) .vditor-ir__marker { display: none !important; }
+/* 标题左侧的块类型角标（H1/H2）会被容器裁切，极简排版下隐藏 */
+.vditor-ir .vditor-reset h1::before, .vditor-ir .vditor-reset h2::before,
+.vditor-ir .vditor-reset h3::before, .vditor-ir .vditor-reset h4::before,
+.vditor-ir .vditor-reset h5::before, .vditor-ir .vditor-reset h6::before {
+  display: none !important;
+}
+
+/* 紧凑的纵向节奏：vditor 默认的 24/16px 间距在窄栏里过于松散，
+   且它的样式表在运行时后注入，必须提高权重才能覆盖 */
+/* 代码块：hljs 默认白底在近白页面上几乎不可见，改为带描边的独立色块 */
+.vditor-ir .vditor-reset code.hljs {
+  display: block;
+  background: var(--bg-3) !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 6px !important;
+  padding: 8px 11px !important;
+  color: var(--fg) !important;
+  font-size: 0.88em !important;
+  line-height: 1.62 !important;
+}
+.vditor-ir .vditor-ir__node[data-type="code-block"] { margin: 0.35em 0 !important; }
+.vditor-ir .vditor-ir__node[data-type="code-block"] .vditor-ir__preview { min-height: 0 !important; }
+/* 代码块/公式块节点上的 ::before/::after（内容为空格的占位行）会白撑出一个
+   行盒高度，导致块上下各多出约 25px 空白，去掉 */
+.vditor-ir .vditor-ir__node[data-type="code-block"]::before,
+.vditor-ir .vditor-ir__node[data-type="code-block"]::after,
+.vditor-ir .vditor-ir__node[data-type="math-block"]::before,
+.vditor-ir .vditor-ir__node[data-type="math-block"]::after {
+  content: none !important;
+  display: none !important;
+}
+
+/* 预览容器（代码块/公式块）自身带 margin，叠加后留白过大 */
+.vditor-ir .vditor-ir__preview { margin: 0 !important; padding: 0 !important; }
+/* 折叠的原始标记 <pre> 高度为 0，但 vditor 默认 margin:1em 仍占位，形成看不见的空行 */
+.vditor-ir .vditor-ir__node .vditor-ir__marker { margin: 0 !important; padding: 0 !important; }
+.vditor-ir .vditor-reset .katex-display { margin: 0.55em 0 !important; }
+
+.vditor-ir .vditor-reset p { margin: 0.55em 0 !important; }
+.vditor-ir .vditor-reset h1 { margin: 0.9em 0 0.45em !important; }
+.vditor-ir .vditor-reset h2,
+.vditor-ir .vditor-reset h3,
+.vditor-ir .vditor-reset h4,
+.vditor-ir .vditor-reset h5,
+.vditor-ir .vditor-reset h6 { margin: 0.9em 0 0.35em !important; }
+.vditor-ir .vditor-reset > :first-child { margin-top: 0 !important; }
+.vditor-ir .vditor-reset ul,
+.vditor-ir .vditor-reset ol {
+  margin: 0.35em 0 0.6em !important;
+  padding-left: 1.4em !important;
+}
+.vditor-ir .vditor-reset li { margin: 0.14em 0 !important; }
+.vditor-ir .vditor-reset li > p { margin: 0.15em 0 !important; }
+
+/* 任务列表复选框：极简方形，点击可切换 */
+.vditor-task { list-style: none; }
+.vditor-task input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+  background: transparent;
+  vertical-align: 0;
+  margin-right: 7px;
+  cursor: pointer;
+  position: relative;
+  top: -1px;
+}
+.vditor-task input[type="checkbox"]:checked {
+  background: var(--fg);
+  border-color: var(--fg);
+}
+.vditor-task input[type="checkbox"]:checked::after {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 0.5px;
+  width: 3px;
+  height: 6px;
+  border: solid var(--bg);
+  border-width: 0 1.6px 1.6px 0;
+  transform: rotate(42deg);
+}
+
+/* KaTeX 与正文基线对齐 */
+.katex { font-size: 1.04em; }
+.vditor-reset .katex-display { margin: 0.8em 0; }
+
+/* 选中文本 */
+::selection { background: var(--sel); }
+
+/* ---------- 自动高亮：日期 / 时间 / 地点 ----------
+   用 CSS Custom Highlight API 上底色，不改 DOM、不打断编辑与光标 */
+::highlight(fn-date) { background-color: rgba(74, 130, 214, .20); }
+::highlight(fn-time) { background-color: rgba(214, 150, 52, .26); }
+::highlight(fn-place) { background-color: rgba(58, 158, 110, .18); }
+
+html[data-theme="dark"] ::highlight(fn-date) { background-color: rgba(96, 150, 232, .30); }
+html[data-theme="dark"] ::highlight(fn-time) { background-color: rgba(226, 168, 72, .28); }
+html[data-theme="dark"] ::highlight(fn-place) { background-color: rgba(76, 180, 130, .26); }
+
+/* 截止日期 ddl{...}：整段红字。highlight 只能改 color / background 等有限属性，
+   没法加粗，所以用颜色 + 虚线下划线来突出。 */
+::highlight(fn-ddl) { color: var(--danger); text-decoration: underline dotted; }
+/* 花括号本身：涂成透明。规范不支持 font-size，所以会留下约一个字宽的间隙，
+   视觉上等同于空白，比把 {} 直接显示出来干净得多。 */
+::highlight(fn-ddl-brace) { color: transparent; }
+
+/* 「上周未完成」区块：整块红字 */
+::highlight(fn-carry) { color: var(--danger); }
+
+/* ---------- 便签内链接：蓝色超链接 ----------
+   IR 模式下 vditor 用 span.vditor-ir__link 渲染链接正文，不产出 <a>，
+   所以两种结构都要覆盖 */
+.vditor-ir__node[data-type="a"] .vditor-ir__link {
+  color: var(--link) !important;
+  text-decoration: underline;
+  text-decoration-color: rgba(47, 111, 208, .45);
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+html[data-theme="dark"] .vditor-ir__node[data-type="a"] .vditor-ir__link {
+  text-decoration-color: rgba(116, 169, 234, .5);
+}
+.vditor-ir__node[data-type="a"] .vditor-ir__link:hover { text-decoration-color: currentColor; }
+
+.vditor-reset a[href^="floatnote://"],
+.vditor-reset a[href^="http"] {
+  color: var(--link) !important;
+  text-decoration: underline;
+  text-decoration-color: rgba(47, 111, 208, .45);
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.vditor-reset a:hover { text-decoration-color: currentColor; }
+
+/* ---------- ==高亮== 语法 ---------- */
+.vditor-reset mark {
+  background-color: var(--mark-bg);
+  color: var(--mark-fg);
+  padding: 0 2px;
+  border-radius: 2px;
+}
+/* IR 模式下未进入编辑态的标记符号，弱化显示 */
+.vditor-ir__marker--bi { opacity: .55; }
+
+/* ---------- 关键词链接确认条 ---------- */
+.link-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 6;
+}
+
+.link-pill {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  padding: 1px;
+  border-radius: 5px;
+  background: var(--bg);
+  border: 1px solid var(--line-strong);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .10);
+  pointer-events: auto;
+}
+html[data-theme="dark"] .link-pill { box-shadow: 0 2px 8px rgba(0, 0, 0, .5); }
+
+.link-pill button {
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  font-family: inherit;
+  font-size: 9px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  color: var(--fg-3);
+}
+.link-pill button.ok:hover { background: rgba(58, 158, 110, .16); color: #3a9e6e; }
+.link-pill button.no:hover { background: rgba(190, 80, 70, .14); color: #be5046; }
+
+/* ---------- 状态栏小开关 ---------- */
+.mini {
+  font-family: inherit;
+  font-size: var(--fs-small);
+  color: var(--fg-3);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  padding: 0 6px;
+  line-height: 1.5;
+  cursor: pointer;
+}
+.mini:hover { color: var(--fg-2); }
+.mini.is-on { color: var(--fg); border-color: var(--line-strong); }
+
+/* ---------- 浮层：新建菜单 / 标记面板 ---------- */
+.pop {
+  position: fixed;
+  z-index: 40;
+  background: var(--bg);
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  box-shadow: var(--pop-shadow);
+  padding: 4px;
+}
+.pop[hidden] { display: none; }
+
+.pop-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  font-family: inherit;
+  text-align: left;
+  color: var(--fg);
+  background: transparent;
+  border: 0;
+  border-radius: 5px;
+  padding: 5px 8px;
+  cursor: pointer;
+}
+.pop-item:hover { background: var(--bg-3); }
+.pop-ico { font-size: 13px; line-height: 1; }
+.pop-txt { display: flex; flex-direction: column; gap: 1px; }
+.pop-txt b { font-size: 12px; font-weight: 500; }
+.pop-txt i {
+  font-style: normal;
+  font-size: 10px;
+  color: var(--fg-3);
+}
+
+.palette { width: 216px; padding: 8px; }
+
+.pal-title {
+  font-size: 10px;
+  color: var(--fg-3);
+  letter-spacing: 0.1em;
+  padding: 0 2px 5px;
+}
+.pal-title-sub { padding-top: 7px; }
+
+.pal-grid {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  gap: 2px;
+}
+.pal-grid button {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  line-height: 1;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+}
+.pal-grid button:hover { background: var(--bg-3); }
+.pal-grid button.is-on { border-color: var(--fg-3); background: var(--bg-3); }
+
+.pal-colors {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  gap: 4px;
+  padding: 0 1px;
+}
+.pal-colors button {
+  aspect-ratio: 1;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  cursor: pointer;
+  padding: 0;
+  position: relative;
+}
+.pal-colors button.is-on { border-color: var(--fg); }
+.pal-colors button span {
+  position: absolute;
+  inset: 2px;
+  border-radius: 50%;
+  display: block;
+}
+
+.pal-clear {
+  width: 100%;
+  margin-top: 8px;
+  font-family: inherit;
+  font-size: 11px;
+  color: var(--fg-2);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 3px 0;
+  cursor: pointer;
+}
+.pal-clear:hover { color: var(--fg); border-color: var(--line-strong); }
+
+/* ---------- 提醒确认条与设置框 ---------- */
+.link-pill .clock {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  font-size: 9px;
+  color: var(--fg-2);
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(20, 20, 18, .26);
+}
+.modal[hidden] { display: none; }
+html[data-theme="dark"] .modal { background: rgba(0, 0, 0, .52); }
+
+.modal-box {
+  width: 302px;
+  background: var(--bg);
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  box-shadow: var(--pop-shadow);
+  padding: 14px;
+}
+
+.modal-head {
+  font-size: 12px;
+  color: var(--fg);
+  letter-spacing: 0.04em;
+  margin-bottom: 11px;
+}
+
+.modal-body { display: flex; flex-direction: column; gap: 9px; }
+
+.fld { display: flex; align-items: center; gap: 8px; }
+.fld > span {
+  width: 26px;
+  flex: none;
+  font-size: var(--fs-small);
+  color: var(--fg-3);
+}
+.fld input {
+  flex: 1;
+  min-width: 0;
+  font-family: inherit;
+  font-size: var(--fs-small);
+  color: var(--fg);
+  background: var(--bg-2);
+  border: 1px solid var(--line-strong);
+  border-radius: 5px;
+  padding: 4px 7px;
+  outline: none;
+}
+.fld input:focus { border-color: var(--fg-3); }
+
+.fld-hint {
+  min-height: 13px;
+  padding-left: 34px;
+  font-size: 10px;
+  color: var(--fg-3);
+}
+.fld-hint.warn { color: #be5046; }
+
+.modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 11px;
+}
+
+.btn {
+  font-family: inherit;
+  font-size: var(--fs-small);
+  color: var(--fg-2);
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  border-radius: 5px;
+  padding: 3px 13px;
+  cursor: pointer;
+}
+.btn:hover { color: var(--fg); border-color: var(--fg-3); }
+
+.btn-primary {
+  color: var(--bg);
+  background: var(--fg-2);
+  border-color: var(--fg-2);
+}
+.btn-primary:hover { background: var(--fg); border-color: var(--fg); color: var(--bg); }

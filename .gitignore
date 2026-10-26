@@ -1,0 +1,30 @@
+# 构建产物
+bin/
+obj/
+publish/
+pkg/
+
+# 发布出来的单文件可执行程序（走 GitHub Release，不进 Git）
+/FloatNote.exe
+*.exe
+!src/tools/*.exe
+
+# 运行时数据：便签正文、索引、设置、提醒、日志
+# 这里面是用户真实内容，绝不能进版本库
+data/
+*.log
+
+# 验收/截图产物
+_shots/
+_vlog*.txt
+__pycache__/
+*.py[cod]
+
+# 编辑器 / 系统
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+Thumbs.db
+desktop.ini

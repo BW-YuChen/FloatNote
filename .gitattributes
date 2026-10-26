@@ -1,0 +1,15 @@
+# 默认由 Git 自动判断文本文件，检出到 Windows 时用 CRLF
+* text=auto
+
+# 脚本类固定 CRLF，避免 cmd.exe 解析异常
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# 二进制资源不要被转换
+*.ico binary
+*.png binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
