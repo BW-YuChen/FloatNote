@@ -9,7 +9,12 @@ from cdp import CDP
 
 _SRC = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WORK = os.path.join(_SRC, "bin", "Debug", "net10.0-windows")
-APP = os.environ.get("FN_EXE", os.path.join(WORK, "FloatNote.exe"))
+def _norm_exe(p):
+    # 有些 shell 会把反斜杠再转义一层，路径里出现 \\\\ 会导致字符串比对失败
+    return p.replace("\\\\", "\\") if p else p
+
+
+APP = _norm_exe(os.environ.get("FN_EXE", os.path.join(WORK, "FloatNote.exe")))
 OUT = os.path.join(os.path.dirname(_SRC), "_shots")
 
 os.makedirs(OUT, exist_ok=True)

@@ -19,6 +19,7 @@
       </button>
     </div>
     <div class="tb-right">
+      <button id="btnSettings" class="ic" title="设置">⚙</button>
       <button id="btnSidebar" class="ic" title="收起 / 展开便签栏">≡</button>
       <button id="btnTheme" class="ic" title="切换配色（浅色 / 深色 / 跟随系统）">◐</button>
       <button id="btnMin" class="ic" title="最小化">–</button>
@@ -98,6 +99,103 @@
       <button id="remCancel" class="btn" type="button">取消</button>
       <button id="remSave" class="btn btn-primary" type="button">添加提醒</button>
     </div>
+  </div>
+</div>
+
+<div id="settingsPage" class="set-page" hidden>
+  <header class="set-top">
+    <button id="setBack" class="ic set-back" type="button" title="返回（Esc）">‹</button>
+    <span class="set-title">设置</span>
+    <span id="setVersion" class="set-ver"></span>
+  </header>
+
+  <div class="set-body" id="setBody">
+
+    <section class="set-group">
+      <div class="set-gt">启动</div>
+      <div class="set-row">
+        <div class="set-txt"><b>开机自启动</b><i>登录 Windows 后自动运行浮笺</i></div>
+        <button id="swStartup" class="sw" type="button" role="switch" aria-checked="false"><span class="sw-dot"></span></button>
+      </div>
+      <div class="set-row">
+        <div class="set-txt"><b>启动时隐藏到托盘</b><i>开机后不弹窗，按 Ctrl+Alt+N 唤出</i></div>
+        <button id="swStartMin" class="sw" type="button" role="switch" aria-checked="false"><span class="sw-dot"></span></button>
+      </div>
+    </section>
+
+    <section class="set-group">
+      <div class="set-gt">窗口</div>
+      <div class="set-row">
+        <div class="set-txt"><b>窗口层级</b><i>贴桌面在最底层，置顶在最上层</i></div>
+        <div class="seg" id="segLevel">
+          <button type="button" data-v="desk">贴桌面</button>
+          <button type="button" data-v="normal">普通</button>
+          <button type="button" data-v="top">置顶</button>
+        </div>
+      </div>
+      <div class="set-row">
+        <div class="set-txt"><b>固定置顶</b><i>每 2 秒校验一次，被其它程序压下去会自动抢回</i></div>
+        <button id="swFixedTop" class="sw" type="button" role="switch" aria-checked="false"><span class="sw-dot"></span></button>
+      </div>
+      <div class="set-row">
+        <div class="set-txt"><b>配色</b><i>跟随系统时随 Windows 应用主题切换</i></div>
+        <div class="seg" id="segTheme">
+          <button type="button" data-v="light">浅色</button>
+          <button type="button" data-v="dark">深色</button>
+          <button type="button" data-v="system">跟随</button>
+        </div>
+      </div>
+      <div class="set-row">
+        <div class="set-txt"><b>正文字号</b><i>也可在正文里用 Ctrl+滚轮 调整</i></div>
+        <div class="set-size">
+          <input id="rngFont" type="range" min="11" max="22" step="1" value="14">
+          <span id="fontVal" class="set-val">14</span>
+        </div>
+      </div>
+      <div class="set-row">
+        <div class="set-txt"><b>显示便签栏</b><i>左侧的便签 / 提醒列表</i></div>
+        <button id="swSidebar" class="sw" type="button" role="switch" aria-checked="false"><span class="sw-dot"></span></button>
+      </div>
+    </section>
+
+    <section class="set-group">
+      <div class="set-gt">编辑</div>
+      <div class="set-row">
+        <div class="set-txt"><b>日期 / 时间 / 地点高亮</b><i>三类信息各用一种底色，不改动正文内容</i></div>
+        <button id="swHL" class="sw" type="button" role="switch" aria-checked="false"><span class="sw-dot"></span></button>
+      </div>
+      <div class="set-row">
+        <div class="set-txt"><b>关键词互链提示</b><i>命中其它便签标题时浮现 ✓ / ✗</i></div>
+        <button id="swLK" class="sw" type="button" role="switch" aria-checked="false"><span class="sw-dot"></span></button>
+      </div>
+      <div class="set-row">
+        <div class="set-txt"><b>每周一 04:00 自动结算</b><i>已完成清除，未完成移入「上周未完成」并标红</i></div>
+        <button id="swWeekly" class="sw" type="button" role="switch" aria-checked="false"><span class="sw-dot"></span></button>
+      </div>
+    </section>
+
+    <section class="set-group">
+      <div class="set-gt">数据</div>
+      <div class="set-row set-row-col">
+        <div class="set-txt"><b>数据目录</b><i id="setDataDir" class="set-path">—</i></div>
+        <div class="set-acts">
+          <button id="btnOpenData" class="btn" type="button">打开文件夹</button>
+          <button id="btnWeeklyNow" class="btn" type="button">立即结算本周</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="set-group">
+      <div class="set-gt">关于</div>
+      <div class="set-row set-row-col">
+        <div class="set-txt"><b>浮笺 FloatNote</b><i>常驻桌面的极简便签 · Markdown 即时渲染 · 本地存储</i></div>
+        <div class="set-acts">
+          <button id="btnRepo" class="btn" type="button">GitHub 仓库</button>
+          <button id="btnExit" class="btn" type="button">退出程序</button>
+        </div>
+      </div>
+    </section>
+
   </div>
 </div>
 

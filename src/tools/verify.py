@@ -12,9 +12,16 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from cdp import CDP
 
 _SRC = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-APP = os.environ.get(
+
+
+def _norm_exe(p):
+    # 有些 shell 会把反斜杠再转义一层，路径里出现 \\\\ 会导致字符串比对失败
+    return p.replace("\\\\", "\\") if p else p
+
+
+APP = _norm_exe(os.environ.get(
     "FN_EXE",
-    os.path.join(_SRC, "bin", "Release", "net10.0-windows", "FloatNote.exe"))
+    os.path.join(_SRC, "bin", "Release", "net10.0-windows", "FloatNote.exe")))
 WORK = os.path.dirname(APP)
 DATA = os.path.join(WORK, "data")
 
@@ -53,10 +60,19 @@ def ex_topmost(h):
 
 
 def main():
-    # data 目录的清理由调用方用 .NET 通道完成（Python 的删除通道在 safe-delete 下不可靠）
-    _rem = os.path.join(DATA, "reminders.json")
-    if os.path.exists(_rem):
-        os.remove(_rem)
+    # 必须从空库起步：「首次运行会种一张每周待办」这类断言只有在干净数据目录下才有意义
+    import shutil
+    subprocess.run(["taskkill", "/F", "/IM", "FloatNote.exe"], capture_output=True)
+    time.sleep(0.8)
+    for name in ("index.json", "settings.json", "reminders.json"):
+        p = os.path.join(DATA, name)
+        if os.path.exists(p):
+            os.remove(p)
+    for name in ("notes", "trash"):
+        p = os.path.join(DATA, name)
+        if os.path.isdir(p):
+            shutil.rmtree(p, ignore_errors=True)
+
     p = subprocess.Popen([APP, "--dev"], cwd=WORK,
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
@@ -107,7 +123,15 @@ def main():
         h = find_window()
         check("窗口存在", h != 0)
         if h:
-            check("窗口带 WS_EX_TOPMOST", ex_topmost(h))
+            # 固定置顶每 2 秒校验一次，首次启动要等窗口激活后才补齐样式位，
+            # 因此给最多 5 秒的收敛窗口，避免把「刚起来还没轮到」误判成缺陷
+            top = False
+            for _ in range(10):
+                if ex_topmost(h):
+                    top = True
+                    break
+                time.sleep(0.5)
+            check("窗口带 WS_EX_TOPMOST", top)
 
         # --- 3. 每周待办正文 ---
         content = cdp.eval("window.__fn.state.contents.get(window.__fn.state.activeId)")

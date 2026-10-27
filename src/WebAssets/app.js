@@ -66,7 +66,12 @@
       sidebar: true,
       fixedTop: true,
       autoHighlight: true,
-      autoLink: true
+      autoLink: true,
+      startWithWindows: false,
+      startMinimized: false,
+      weeklyAutoReset: true,
+      version: '',
+      dataDir: ''
     },
     hotkeyOk: true
   };
@@ -572,9 +577,7 @@
     $('btnLK').classList.toggle('is-on', !!state.settings.autoLink);
   }
 
-  function cycleLevel() {
-    var cur = state.settings.level || 'top';
-    var next = LEVEL_ORDER[(LEVEL_ORDER.indexOf(cur) + 1) % LEVEL_ORDER.length];
+  function setLevel(next) {
     state.settings.level = next;
     // 手动降层即认为不想再固定
     if (next !== 'top' && state.settings.fixedTop) {
@@ -583,29 +586,73 @@
     }
     updateLevelBtn();
     post({ type: 'level', level: next });
+    if (settingsOpen()) renderSettings();
+  }
+
+  function cycleLevel() {
+    var cur = state.settings.level || 'top';
+    var next = LEVEL_ORDER[(LEVEL_ORDER.indexOf(cur) + 1) % LEVEL_ORDER.length];
+    setLevel(next);
     setStatus('层级已切换为「' + LEVEL_TEXT[next] + '」');
+  }
+
+  function setTheme(next) {
+    state.settings.theme = next;
+    applyTheme();
+    post({ type: 'theme', theme: next });
+    if (settingsOpen()) renderSettings();
   }
 
   function cycleTheme() {
     var cur = state.settings.theme;
-    var next = THEME_ORDER[(THEME_ORDER.indexOf(cur) + 1) % THEME_ORDER.length];
-    state.settings.theme = next;
-    applyTheme();
-    post({ type: 'theme', theme: next });
+    setTheme(THEME_ORDER[(THEME_ORDER.indexOf(cur) + 1) % THEME_ORDER.length]);
+  }
+
+  function setFixedTop(on) {
+    state.settings.fixedTop = !!on;
+    state.settings.level = on ? 'top' : 'normal';
+    updateLevelBtn();
+    updatePinBtn();
+    post({ type: 'fixedTop', on: state.settings.fixedTop });
+    if (settingsOpen()) renderSettings();
   }
 
   function toggleFixedTop() {
-    state.settings.fixedTop = !state.settings.fixedTop;
-    if (state.settings.fixedTop) {
-      state.settings.level = 'top';
-      updateLevelBtn();
-    } else {
-      state.settings.level = 'normal';
-      updateLevelBtn();
-    }
-    updatePinBtn();
-    post({ type: 'fixedTop', on: state.settings.fixedTop });
+    setFixedTop(!state.settings.fixedTop);
     setStatus(state.settings.fixedTop ? '已固定置顶' : '已取消固定置顶');
+  }
+
+  function setAutoHighlight(on) {
+    state.settings.autoHighlight = !!on;
+    updateMini();
+    post({ type: 'autoFlag', name: 'highlight', on: state.settings.autoHighlight });
+    decorate();
+    if (settingsOpen()) renderSettings();
+  }
+
+  function setAutoLink(on) {
+    state.settings.autoLink = !!on;
+    updateMini();
+    post({ type: 'autoFlag', name: 'link', on: state.settings.autoLink });
+    if (!state.settings.autoLink) clearPills();
+    decorate();
+    if (settingsOpen()) renderSettings();
+  }
+
+  function setSidebar(on) {
+    state.settings.sidebar = !!on;
+    document.querySelector('.workspace')
+      .classList.toggle('no-side', !state.settings.sidebar);
+    post({ type: 'sidebar', on: state.settings.sidebar });
+    if (settingsOpen()) renderSettings();
+  }
+
+  function setFontSize(size) {
+    var next = Math.min(22, Math.max(11, size | 0));
+    if (next === state.settings.fontSize) return;
+    state.settings.fontSize = next;
+    applyFontSize();
+    return next;
   }
 
   /* ---------------- 浮层：新建菜单 / 标记面板 ---------------- */
@@ -1444,10 +1491,137 @@
 
   /* ---------------- 按钮与快捷键 ---------------- */
 
+  /* ---------------- 设置页 ---------------- */
+
+  var REPO_URL = 'https://github.com/BW-YuChen/FloatNote';
+
+  function settingsOpen() {
+    var p = $('settingsPage');
+    return !!p && !p.hidden;
+  }
+
+  function openSettings() {
+    closePops();
+    if (!$('remDialog').hidden) closeReminderDialog();
+    $('settingsPage').hidden = false;
+    renderSettings();
+    $('setBody').scrollTop = 0;
+  }
+
+  function closeSettings() {
+    $('settingsPage').hidden = true;
+  }
+
+  function setSwitch(id, on) {
+    var el = $(id);
+    if (!el) return;
+    el.classList.toggle('is-on', !!on);
+    el.setAttribute('aria-checked', on ? 'true' : 'false');
+  }
+
+  function setSeg(id, value) {
+    var box = $(id);
+    if (!box) return;
+    Array.prototype.forEach.call(box.querySelectorAll('button'), function (b) {
+      b.classList.toggle('is-on', b.getAttribute('data-v') === value);
+    });
+  }
+
+  function renderSettings() {
+    var s = state.settings;
+    setSwitch('swStartup', s.startWithWindows);
+    setSwitch('swStartMin', s.startMinimized);
+    setSwitch('swFixedTop', s.fixedTop);
+    setSwitch('swSidebar', s.sidebar);
+    setSwitch('swHL', s.autoHighlight);
+    setSwitch('swLK', s.autoLink);
+    setSwitch('swWeekly', s.weeklyAutoReset);
+    setSeg('segLevel', s.level || 'top');
+    setSeg('segTheme', s.theme || 'system');
+    var rng = $('rngFont');
+    if (rng) rng.value = String(s.fontSize || 14);
+    $('fontVal').textContent = String(s.fontSize || 14);
+    $('setVersion').textContent = s.version ? 'v' + s.version : '';
+    $('setDataDir').textContent = s.dataDir || '—';
+  }
+
+  function bindSettings() {
+    $('btnSettings').addEventListener('click', openSettings);
+    $('setBack').addEventListener('click', closeSettings);
+
+    // 开关：读当前类名取反，点击与宿主回推的双向来路都不会打架
+    function onSwitch(id, fn) {
+      $(id).addEventListener('click', function () {
+        fn(!$(id).classList.contains('is-on'));
+      });
+    }
+
+    onSwitch('swStartup', function (on) {
+      setSwitch('swStartup', on);
+      state.settings.startWithWindows = on;
+      post({ type: 'startup', on: on });
+      setStatus('开机自启' + (on ? '已开启' : '已关闭'));
+    });
+
+    onSwitch('swStartMin', function (on) {
+      setSwitch('swStartMin', on);
+      state.settings.startMinimized = on;
+      post({ type: 'startMinimized', on: on });
+    });
+
+    onSwitch('swFixedTop', function (on) { setFixedTop(on); });
+
+    onSwitch('swSidebar', function (on) { setSidebar(on); });
+
+    onSwitch('swHL', function (on) { setAutoHighlight(on); });
+
+    onSwitch('swLK', function (on) { setAutoLink(on); });
+
+    onSwitch('swWeekly', function (on) {
+      setSwitch('swWeekly', on);
+      state.settings.weeklyAutoReset = on;
+      post({ type: 'weeklyAutoReset', on: on });
+      setStatus(on ? '已开启每周自动结算' : '已关闭每周自动结算');
+    });
+
+    $('segLevel').addEventListener('click', function (ev) {
+      var b = ev.target.closest('button[data-v]');
+      if (!b) return;
+      setLevel(b.getAttribute('data-v'));
+    });
+
+    $('segTheme').addEventListener('click', function (ev) {
+      var b = ev.target.closest('button[data-v]');
+      if (!b) return;
+      setTheme(b.getAttribute('data-v'));
+    });
+
+    var rng = $('rngFont');
+    rng.addEventListener('input', function () {
+      var n = setFontSize(parseInt(rng.value, 10));
+      if (n) $('fontVal').textContent = String(n);
+    });
+    // 拖动过程中只改本地样式，松手才落盘，避免每挪一格写一次配置文件
+    rng.addEventListener('change', function () {
+      post({ type: 'fontSize', size: state.settings.fontSize });
+    });
+
+    $('btnOpenData').addEventListener('click', function () { post({ type: 'openData' }); });
+    $('btnWeeklyNow').addEventListener('click', function () {
+      post({ type: 'weeklyReset' });
+      setStatus('已结算本周待办');
+    });
+    $('btnRepo').addEventListener('click', function () {
+      post({ type: 'openExternal', url: REPO_URL });
+    });
+    $('btnExit').addEventListener('click', function () { post({ type: 'exit' }); });
+  }
+
   function bindUi() {
     $('btnLevel').addEventListener('click', cycleLevel);
     $('btnPin').addEventListener('click', toggleFixedTop);
     $('btnTheme').addEventListener('click', cycleTheme);
+    bindSettings();
     $('btnNew').addEventListener('click', function (ev) {
       ev.stopPropagation();
       openNewMenu();
@@ -1492,24 +1666,15 @@
     });
 
     $('btnHL').addEventListener('click', function () {
-      state.settings.autoHighlight = !state.settings.autoHighlight;
-      updateMini();
-      post({ type: 'autoFlag', name: 'highlight', on: state.settings.autoHighlight });
-      decorate();
+      setAutoHighlight(!state.settings.autoHighlight);
     });
 
     $('btnLK').addEventListener('click', function () {
-      state.settings.autoLink = !state.settings.autoLink;
-      updateMini();
-      post({ type: 'autoFlag', name: 'link', on: state.settings.autoLink });
-      if (!state.settings.autoLink) clearPills();
-      decorate();
+      setAutoLink(!state.settings.autoLink);
     });
 
     $('btnSidebar').addEventListener('click', function () {
-      state.settings.sidebar = !state.settings.sidebar;
-      document.querySelector('.workspace')
-        .classList.toggle('no-side', !state.settings.sidebar);
+      setSidebar(!state.settings.sidebar);
       closePops();
     });
 
@@ -1523,6 +1688,13 @@
 
     var bar = $('titlebar');
     bar.addEventListener('mousedown', function (ev) {
+      if (ev.button !== 0) return;
+      if (ev.target.closest('button')) return;
+      post({ type: 'drag' });
+    });
+
+    // 设置页有自己的一条顶栏，同样允许拖窗
+    document.querySelector('.set-top').addEventListener('mousedown', function (ev) {
       if (ev.button !== 0) return;
       if (ev.target.closest('button')) return;
       post({ type: 'drag' });
@@ -1642,6 +1814,11 @@
     }
 
     document.addEventListener('keydown', function (ev) {
+      // 设置页是整幅覆盖层：打开时不触发正文快捷键，Esc 只负责返回
+      if (settingsOpen()) {
+        if (ev.key === 'Escape') { ev.preventDefault(); closeSettings(); }
+        return;
+      }
       if (ev.key === 'Escape') {
         closePops();
         if (!$('remDialog').hidden) { closeReminderDialog(); return; }
@@ -1776,6 +1953,33 @@
     });
   }
 
+  /** 把宿主回推的设置合入本地状态并刷新所有依赖它的界面。 */
+  function applySettings(s) {
+    if (!s) return;
+    state.settings.theme = s.theme || 'system';
+    state.settings.fontSize = s.fontSize || 14;
+    state.settings.level = s.level || 'top';
+    state.settings.systemDark = !!s.systemDark;
+    state.settings.sidebar = s.sidebar !== false;
+    state.settings.fixedTop = s.fixedTop !== false;
+    state.settings.autoHighlight = s.autoHighlight !== false;
+    state.settings.autoLink = s.autoLink !== false;
+    state.settings.startWithWindows = !!s.startWithWindows;
+    state.settings.startMinimized = !!s.startMinimized;
+    state.settings.weeklyAutoReset = s.weeklyAutoReset !== false;
+    if (s.version) state.settings.version = s.version;
+    if (s.dataDir) state.settings.dataDir = s.dataDir;
+
+    document.querySelector('.workspace')
+      .classList.toggle('no-side', !state.settings.sidebar);
+    applyTheme();
+    applyFontSize();
+    updateLevelBtn();
+    updatePinBtn();
+    updateMini();
+    if (settingsOpen()) renderSettings();
+  }
+
   function onHostMessage(ev) {
     var msg = ev.data;
     if (!msg || !msg.type) return;
@@ -1786,27 +1990,12 @@
         state.contents.clear();
         (msg.notes || []).forEach(function (n) { state.contents.set(n.id, n.content || ''); });
         state.activeId = msg.activeId || (state.notes[0] ? state.notes[0].id : null);
-        if (msg.settings) {
-          state.settings.theme = msg.settings.theme || 'system';
-          state.settings.fontSize = msg.settings.fontSize || 14;
-          state.settings.level = msg.settings.level || 'top';
-          state.settings.systemDark = !!msg.settings.systemDark;
-          state.settings.sidebar = msg.settings.sidebar !== false;
-          state.settings.fixedTop = msg.settings.fixedTop !== false;
-          state.settings.autoHighlight = msg.settings.autoHighlight !== false;
-          state.settings.autoLink = msg.settings.autoLink !== false;
-        }
         state.hotkeyOk = msg.hotkeyOk !== false;
         state.reminders = msg.reminders || [];
         state.booted = true;
         log('INIT notes=' + state.notes.length + ' active=' + state.activeId +
           ' fixedTop=' + state.settings.fixedTop);
-        document.querySelector('.workspace')
-          .classList.toggle('no-side', !state.settings.sidebar);
-        applyTheme();
-        applyFontSize();
-        updateLevelBtn();
-        updatePinBtn();
+        applySettings(msg.settings);
         updateMini();
         if (!state.hotkeyOk) {
           $('statusHint').textContent = '全局热键被占用，可从托盘唤出';
@@ -1820,6 +2009,10 @@
       case 'reminders':
         state.reminders = msg.list || [];
         renderReminders();
+        break;
+
+      case 'settings':
+        applySettings(msg.settings);
         break;
 
       case 'focusNote':
@@ -1996,7 +2189,10 @@
       setEditorValue: setEditorValue,
       openPalette: openPalette,
       createNote: createNote,
-      selectNote: selectNote
+      selectNote: selectNote,
+      openSettings: openSettings,
+      closeSettings: closeSettings,
+      renderSettings: renderSettings
     };
   }
 

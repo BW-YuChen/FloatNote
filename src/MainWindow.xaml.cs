@@ -39,12 +39,21 @@ public partial class MainWindow : Window
     private bool _reallyClose;
     private bool _hotKeyOk;
     private bool _geoDirty;
+    private bool _hideAfterReady;
 
     public MainWindow(bool devMode)
     {
         _devMode = devMode;
         _settings = SettingsStore.Load();
         _level = _settings.Level;
+
+        // 注册表是自启动的唯一真相：用户可能在「任务管理器 → 启动」里手动禁用过，
+        // 配置文件里记的 true 并不代表真的会自启。
+        _settings.StartWithWindows = StartupRegistrar.IsEnabled();
+
+        // 启动后隐藏到托盘：等页面完全就绪再收，避免 WebView 初始化被打断。
+        // dev 模式强制显示，否则验收脚本抓不到页面。
+        _hideAfterReady = _settings.StartMinimized && !devMode;
 
         // 固定置顶与「贴桌面/普通」互斥：配置文件里若出现矛盾组合，以固定置顶为准
         if (_settings.FixedTop) _level = WindowLevel.Top;
@@ -403,7 +412,10 @@ var level = WindowLevel.Top; // 置顶 / 普通 / 贴桌面
         }
 
         if (_uiReady)
+        {
             Post(new { type = "level", level = LevelToken(level) });
+            PostSettings();
+        }
 
         _tray?.UpdateLevel(level);
     }
@@ -430,6 +442,7 @@ var level = WindowLevel.Top; // 置顶 / 普通 / 贴桌面
 
         AppLog.Write($"SetFixedTop: {on} level={_level}");
         PostFixedTop();
+        PostSettings();
         _tray?.UpdateFixedTop(on);
     }
 
@@ -646,6 +659,9 @@ var level = WindowLevel.Top; // 置顶 / 普通 / 贴桌面
     {
         try
         {
+            // 自动结算可在设置页关闭；手动触发（托盘 / 设置页按钮）不受开关限制
+            if (!force && !_settings.WeeklyAutoReset) return;
+
             var now = DateTime.Now;
             var cycle = WeeklyTemplate.CycleStart(now);
             string key = cycle.ToString("yyyy-MM-dd");
@@ -738,15 +754,18 @@ var level = WindowLevel.Top; // 置顶 / 普通 / 贴桌面
         ApplyWindowBackground();
         if (_uiReady) Post(new { type = "theme", theme });
         _tray?.UpdateTheme(theme);
+        PostSettings();
     }
 
-    private void ToggleStartup()
+    private void ToggleStartup() => SetStartup(!_settings.StartWithWindows);
+
+    private void SetStartup(bool enable)
     {
-        _settings.StartWithWindows = !_settings.StartWithWindows;
+        _settings.StartWithWindows = enable;
         SettingsStore.Save(_settings);
-        StartupRegistrar.Apply(_settings.StartWithWindows);
-        _tray?.UpdateStartup(_settings.StartWithWindows);
-        TrayIconManager.Toast(_settings.StartWithWindows ? "已开启开机自启" : "已关闭开机自启");
+        StartupRegistrar.Apply(enable);
+        _tray?.UpdateStartup(enable);
+        PostSettings();
     }
 
     private void OpenExternal(string target)
@@ -815,6 +834,12 @@ var level = WindowLevel.Top; // 置顶 / 普通 / 贴桌面
                 case "ready":
                     _uiReady = true;
                     Post(BuildInitPayload());
+                    if (_hideAfterReady)
+                    {
+                        _hideAfterReady = false;
+                        AppLog.Write("start minimized: hide after ready");
+                        Hide();
+                    }
                     break;
 
                 case "save":
@@ -891,6 +916,40 @@ var level = WindowLevel.Top; // 置顶 / 普通 / 贴桌面
                     if (name == "highlight") _settings.AutoHighlight = on;
                     else if (name == "link") _settings.AutoLink = on;
                     SettingsStore.Save(_settings);
+                    PostSettings();
+                    break;
+                }
+
+                case "startup":
+                {
+                    bool on = root.TryGetProperty("on", out var suEl) && suEl.ValueKind == JsonValueKind.True;
+                    SetStartup(on);
+                    break;
+                }
+
+                case "startMinimized":
+                {
+                    bool on = root.TryGetProperty("on", out var smEl) && smEl.ValueKind == JsonValueKind.True;
+                    _settings.StartMinimized = on;
+                    SettingsStore.Save(_settings);
+                    PostSettings();
+                    break;
+                }
+
+                case "weeklyAutoReset":
+                {
+                    bool on = root.TryGetProperty("on", out var wrEl) && wrEl.ValueKind == JsonValueKind.True;
+                    _settings.WeeklyAutoReset = on;
+                    SettingsStore.Save(_settings);
+                    PostSettings();
+                    break;
+                }
+
+                case "sidebar":
+                {
+                    bool on = root.TryGetProperty("on", out var sbEl) && sbEl.ValueKind == JsonValueKind.True;
+                    _settings.SidebarVisible = on;
+                    SettingsStore.Save(_settings);
                     break;
                 }
 
@@ -945,6 +1004,7 @@ var level = WindowLevel.Top; // 置顶 / 普通 / 贴桌面
                     int size = root.TryGetProperty("size", out var sz) && sz.TryGetInt32(out int v) ? v : 14;
                     _settings.FontSize = Math.Clamp(size, 11, 22);
                     SettingsStore.Save(_settings);
+                    PostSettings();
                     break;
                 }
 
@@ -1057,21 +1117,49 @@ var level = WindowLevel.Top; // 置顶 / 普通 / 贴桌面
             type = "init",
             notes,
             activeId = idx.ActiveId ?? notes.FirstOrDefault()?.Id,
-            settings = new
-            {
-                theme = _settings.Theme,
-                fontSize = _settings.FontSize,
-                level = LevelToken(_level),
-                systemDark = IsSystemDark(),
-                sidebar = _settings.SidebarVisible,
-                fixedTop = _settings.FixedTop,
-                autoHighlight = _settings.AutoHighlight,
-                autoLink = _settings.AutoLink
-            },
+            settings = BuildSettingsPayload(),
             hotkeyOk = _hotKeyOk,
             reminders = BuildReminderPayload(),
             now = DateTimeOffset.Now.ToUnixTimeMilliseconds()
         };
+    }
+
+    /// <summary>
+    /// 全部可调项的统一快照。初始化和「设置页里改了任意一项」都走这里，
+    /// 避免前端各处各自维护副本导致托盘与页面状态打架。
+    /// </summary>
+    private object BuildSettingsPayload() => new
+    {
+        theme = _settings.Theme,
+        fontSize = _settings.FontSize,
+        level = LevelToken(_level),
+        systemDark = IsSystemDark(),
+        sidebar = _settings.SidebarVisible,
+        fixedTop = _settings.FixedTop,
+        autoHighlight = _settings.AutoHighlight,
+        autoLink = _settings.AutoLink,
+        startWithWindows = StartupRegistrar.IsEnabled(),
+        startMinimized = _settings.StartMinimized,
+        weeklyAutoReset = _settings.WeeklyAutoReset,
+        version = AppVersion(),
+        dataDir = AppPaths.DataDir
+    };
+
+    private void PostSettings()
+    {
+        if (_uiReady) Post(new { type = "settings", settings = BuildSettingsPayload() });
+    }
+
+    private static string AppVersion()
+    {
+        var asm = typeof(MainWindow).Assembly;
+        var attr = Attribute.GetCustomAttribute(
+            asm, typeof(System.Reflection.AssemblyInformationalVersionAttribute))
+            as System.Reflection.AssemblyInformationalVersionAttribute;
+        string v = attr?.InformationalVersion ?? asm.GetName().Version?.ToString() ?? "1.0.0";
+        // 带 SourceLink 时会带 +commit，界面上只显示版本号
+        int cut = v.IndexOf('+');
+        return cut > 0 ? v[..cut] : v;
     }
 
     // ---------- 关闭 / 退出 ----------

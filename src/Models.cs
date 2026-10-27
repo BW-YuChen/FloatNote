@@ -51,6 +51,10 @@ public sealed class AppSettings
     public string Theme { get; set; } = "system"; // light | dark | system
     public int FontSize { get; set; } = 14;
     public bool StartWithWindows { get; set; }
+
+    /// <summary>启动后不显示窗口，直接驻留托盘（通常与开机自启配合使用）。</summary>
+    public bool StartMinimized { get; set; }
+
     public bool SidebarVisible { get; set; } = true;
 
     /// <summary>编辑器自动高亮开关（日期 / 时间 / 地点）。</summary>
@@ -58,6 +62,9 @@ public sealed class AppSettings
 
     /// <summary>关键词自动链接提示开关。</summary>
     public bool AutoLink { get; set; } = true;
+
+    /// <summary>每周一 04:00 自动结算的开关。关闭后只能从托盘或设置页手动结算。</summary>
+    public bool WeeklyAutoReset { get; set; } = true;
 
     /// <summary>
     /// 上一次每周结算对应的「周期起始日」（yyyy-MM-dd）。

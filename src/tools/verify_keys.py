@@ -13,9 +13,16 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from cdp import CDP  # noqa: E402
 
 _SRC = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-EXE = os.environ.get(
+
+
+def _norm_exe(p):
+    # 有些 shell 会把反斜杠再转义一层，路径里出现 \\\\ 会导致字符串比对失败
+    return p.replace("\\\\", "\\") if p else p
+
+
+EXE = _norm_exe(os.environ.get(
     "FN_EXE",
-    os.path.join(_SRC, "bin", "Release", "net10.0-windows", "FloatNote.exe"))
+    os.path.join(_SRC, "bin", "Release", "net10.0-windows", "FloatNote.exe")))
 DATA = os.path.join(os.path.dirname(EXE), "data")
 
 PASS, FAIL = [], []

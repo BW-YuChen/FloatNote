@@ -31,8 +31,9 @@ python verify.py
 | `verify_keys.py` | 19 | Markdown 行内快捷键（B/I/U/X/E/H/K/M）、`==高亮==` 渲染与底色、非正文区域不抢按键 |
 | `verify_link.py` | 10 | `floatnote://` 内部协议拦截：裸 `<a>`、IR 编辑态、`window.open`、绕过前端强改 location 仍存活 |
 | `verify_weekly.py` | 16 | 每周待办不分周几、周一 04:00 结算、未完成搬入并标红、Tab 二级子任务、父子联动、ddl 染色与自动补 `{}` |
+| `verify_settings.py` | 37 | 设置页：入口与五组分区、七个开关回显、开机自启真实写注册表并回滚、层级/配色/字号/侧栏生效与落盘、设置页打开时快捷键让位、重启后持久化 |
 
-合计 **88 项**。
+合计 **125 项**。
 
 ## 其他
 
@@ -44,3 +45,5 @@ python verify.py
 
 - 每套脚本启动前会清空 `data\` 下的索引与提醒，**请不要指向含有真实便签的目录**
 - 脚本之间不要并发跑，都会占用 9222 端口
+- `verify_settings.py` 会临时读写 `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` 验证开机自启，
+  结束时按原值还原。用的是 Python 内置 `winreg`，不调用 `reg.exe`
