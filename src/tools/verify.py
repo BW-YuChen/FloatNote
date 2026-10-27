@@ -10,6 +10,7 @@ from ctypes import wintypes
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from cdp import CDP
+from guard import guard_before_test
 
 _SRC = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -60,10 +61,11 @@ def ex_topmost(h):
 
 
 def main():
+    # 守卫：只要桌面上还有别的浮笺实例（可能是用户本人在用），整个测试立即中止
+    guard_before_test()
+
     # 必须从空库起步：「首次运行会种一张每周待办」这类断言只有在干净数据目录下才有意义
     import shutil
-    subprocess.run(["taskkill", "/F", "/IM", "FloatNote.exe"], capture_output=True)
-    time.sleep(0.8)
     for name in ("index.json", "settings.json", "reminders.json"):
         p = os.path.join(DATA, name)
         if os.path.exists(p):

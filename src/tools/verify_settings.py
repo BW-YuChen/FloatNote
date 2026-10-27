@@ -15,6 +15,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from cdp import CDP  # noqa: E402
+from guard import guard_before_test  # noqa: E402
 
 _SRC = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -127,8 +128,6 @@ def stop(proc, cdp):
         except Exception:
             pass
     time.sleep(0.5)
-    subprocess.run(["taskkill", "/F", "/IM", "FloatNote.exe"], capture_output=True)
-    time.sleep(0.3)
 
 
 def main():
@@ -142,8 +141,8 @@ def main():
         if os.path.exists(p):
             os.remove(p)
 
-    subprocess.run(["taskkill", "/F", "/IM", "FloatNote.exe"], capture_output=True)
-    time.sleep(0.8)
+    # 守卫：只要桌面上还有别的浮笺实例（可能是用户本人在用），整个测试立即中止
+    guard_before_test()
 
     # 记录原始自启动项，结束时还原
     original_run = reg_read()
@@ -366,7 +365,6 @@ def main():
                 proc.terminate()
             except Exception:
                 pass
-            subprocess.run(["taskkill", "/F", "/IM", "FloatNote.exe"], capture_output=True)
 
         # 还原自启动项到测试前状态
         if original_run is None:

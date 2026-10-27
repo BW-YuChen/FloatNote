@@ -40,6 +40,9 @@ public partial class App : Application
         AppLog.Enabled = devMode;
         AppLog.Write("app start, dev=" + devMode);
 
+        // 先快照再开窗：任何后续意外（含更新替换 exe）都有当天之前的存档可回
+        DataBackup.RunOnStartup();
+
         var window = new MainWindow(devMode);
         MainWindow = window;
         window.Show();

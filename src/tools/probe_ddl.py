@@ -11,6 +11,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from cdp import CDP
+from guard import guard_before_test
 
 _SRC = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 APP = os.path.join(_SRC, "bin", "Release", "net10.0-windows", "FloatNote.exe")
@@ -46,8 +47,8 @@ DUMP = r"""
 
 
 def main():
-    subprocess.run(["taskkill", "/F", "/IM", "FloatNote.exe"], capture_output=True)
-    time.sleep(0.8)
+    # 守卫：桌面上还有别的浮笺实例（可能是用户本人在用）时，探针不启动
+    guard_before_test()
     p = subprocess.Popen([APP, "--dev"], cwd=WORK,
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
@@ -86,7 +87,10 @@ def main():
                 print("  HTML: " + str(d.get("html"))[:400])
         cdp.close()
     finally:
-        subprocess.run(["taskkill", "/F", "/IM", "FloatNote.exe"], capture_output=True)
+        try:
+            p.terminate()
+        except Exception:
+            pass
     return 0
 
 

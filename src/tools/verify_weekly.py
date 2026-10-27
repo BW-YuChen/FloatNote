@@ -12,6 +12,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from cdp import CDP  # noqa: E402
+from guard import guard_before_test  # noqa: E402
 
 _SRC = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -62,8 +63,8 @@ def main():
         if os.path.isdir(p):
             shutil.rmtree(p, ignore_errors=True)
 
-    subprocess.run(["taskkill", "/F", "/IM", "FloatNote.exe"], capture_output=True)
-    time.sleep(0.8)
+    # 守卫：只要桌面上还有别的浮笺实例（可能是用户本人在用），整个测试立即中止
+    guard_before_test()
 
     proc = subprocess.Popen([EXE, "--dev"], close_fds=True)
     cdp = None
@@ -294,7 +295,6 @@ def main():
             except Exception:
                 pass
         time.sleep(0.4)
-        subprocess.run(["taskkill", "/F", "/IM", "FloatNote.exe"], capture_output=True)
 
     print()
     print("=== %d/%d 通过 ===" % (len(PASS), len(PASS) + len(FAIL)))
