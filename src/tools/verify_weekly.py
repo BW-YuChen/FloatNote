@@ -192,7 +192,61 @@ def main():
         color = cdp.eval("getComputedStyle(document.documentElement).getPropertyValue('--danger').trim()")
         check("红色变量可用", bool(color), color)
 
-        # ============ 7. 输入 ddl 自动补花括号 ============
+        # ============ 6b. ddl 里的短日期 / 未闭合 / 重复括号 ============
+        render("英语作业（ddl{11-1 11:30}）\n", wait=1.3)
+        check("ddl 内短日期整段染色", hl_size("fn-ddl") == 1, hl_size("fn-ddl"))
+        check("ddl 内的日期不叠日期底色", hl_size("fn-date") == 0, hl_size("fn-date"))
+        check("ddl 内的时间不叠时间底色", hl_size("fn-time") == 0, hl_size("fn-time"))
+
+        render("英语作业 ddl{11-1 11:3\n", wait=1.3)
+        check("未闭合的 ddl 也染色", hl_size("fn-ddl") == 1, hl_size("fn-ddl"))
+
+        render("英语作业 ddl{{11-1 11:30}}\n", wait=1.3)
+        check("重复花括号仍整段染色", hl_size("fn-ddl") == 1, hl_size("fn-ddl"))
+        check("连续括号各算一处透明", hl_size("fn-ddl-brace") == 2, hl_size("fn-ddl-brace"))
+
+        render("# 英语作业 ddl{11-1 11:30}\n\n正文\n", wait=1.3)
+        check("标题里的 ddl 也染色", hl_size("fn-ddl") == 1, hl_size("fn-ddl"))
+
+        cand = cdp.eval("""
+        (function(){
+          var root = document.querySelector('.vditor-ir pre.vditor-reset');
+          var h = root.querySelector('h1') || root.firstElementChild;
+          var w = document.createTreeWalker(h, NodeFilter.SHOW_TEXT, null);
+          var last = null; while (w.nextNode()) last = w.currentNode;
+          if (!last) return null;
+          var r = document.createRange();
+          r.selectNodeContents(last); r.collapse(false);
+          var s = getSelection(); s.removeAllRanges(); s.addRange(r);
+          window.__fn.decorate();
+          var hit = window.__fn.findRemindCandidate();
+          return hit ? hit.text : null;
+        })()
+        """)
+        print("  标题内提醒候选：", cand)
+        check("标题里的时间能触发提醒候选", bool(cand), cand)
+
+        # ============ 6c. 提醒时间解析：ddl 优先、短日期补年份 ============
+        def parsed(line):
+            return cdp.eval(
+                "(function(){var d=window.__fn.parseWhen(%s,new Date());"
+                "return [d.getFullYear(),d.getMonth()+1,d.getDate(),"
+                "d.getHours(),d.getMinutes()].join('-');})()" % json.dumps(line))
+
+        p1 = parsed("英语作业（ddl{11-1 11:30}）")
+        print("  ddl 短日期解析：", p1)
+        check("ddl{11-1 11:30} 解析出 11 月 1 日 11:30", p1.endswith("-11-1-11-30"), p1)
+        check("短日期未给年份时补成未来年份", int(p1.split("-")[0]) >= 2026, p1)
+
+        p2 = parsed("交作业 ddl{11月1日 11:30} 第 3 题")
+        print("  ddl 中文日期解析：", p2)
+        check("ddl{11月1日 11:30} 解析出 11 月 1 日 11:30", p2.endswith("-11-1-11-30"), p2)
+
+        p3 = parsed("11-1 开会 11:30")
+        print("  非 ddl 行解析：", p3)
+        check("非 ddl 行同样认得 11-1", p3.endswith("-11-1-11-30"), p3)
+
+        # ============ 7. 打字不篡改正文（旧版自动补 {}，已移除）============
         render("交作业 ", wait=0.9)
         cdp.eval("""
         (function(){
@@ -210,12 +264,13 @@ def main():
         """)
         time.sleep(1.2)
         v = body()
-        print("  自动补全后：", repr(v))
-        check("打完 ddl 自动补出 {}", "ddl{}" in v.replace(" ", "") or "ddl {" in v, v[:60])
+        print("  打完 ddl 后：", repr(v))
+        check("打完 ddl 不擅自插入花括号", "{" not in v, v[:60])
+        check("正文保持用户原样", "交作业" in v and v.strip().endswith("ddl"), v[:60])
 
-        # ============ 8. 代码块里不补 ============
-        render("```\nddl\n```\n", wait=1.2)
-        check("代码块里的 ddl 不补花括号", "ddl{}" not in body(), body()[:40])
+        # ============ 8. 代码块里的 ddl 不参与染色 ============
+        render("```\nddl{11-1 11:30}\n```\n", wait=1.3)
+        check("代码块里的 ddl 不染色", hl_size("fn-ddl") == 0, hl_size("fn-ddl"))
 
         # ============ 9. 无 JS 异常 ============
         log = os.path.join(DATA, "app.log")

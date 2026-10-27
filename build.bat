@@ -3,7 +3,7 @@ REM Rebuild FloatNote into a single self-contained executable.
 REM Requires .NET 10 SDK. Output: ..\FloatNote.exe
 
 setlocal
-cd /d "%~dp0"
+cd /d "%~dp0src"
 
 echo [1/2] publishing...
 dotnet publish -c Release -r win-x64 --self-contained true ^

@@ -28,12 +28,17 @@
 
   /* 日期 / 时间 / 地点识别。地点优先，其次日期，最后时间，重叠时高优先级者胜 */
   var RE_PLACE = /@[\u4e00-\u9fa5A-Za-z0-9]{1,12}|[A-Za-z]?\d{1,3}\s*号?楼|[A-Z]{0,2}\d{3,4}\s*室|图书馆|会议室|教学楼|实验楼|食堂|宿舍|体育馆|报告厅|办公室|自习室|操场|机房|快递站/g;
-  var RE_DATE = /\d{4}[-/.]\d{1,2}[-/.]\d{1,2}|\d{1,2}月\d{1,2}[日号]|(?:今|明|后|昨|前)天|(?:本|下|上|这)(?:周|星期)[一二三四五六日天]?|(?:周|星期|礼拜)[一二三四五六日天]|\d{1,2}\/\d{1,2}(?![\d\/])/g;
+  /* 日期：完整年月日 / 月日 / 简写 11-1、11/1、11.1 / 相对日 / 周几。
+     简写日期必须夹在非数字之间（前面的 11-01 已被完整式吃掉，靠 taken 去重），
+     否则 "版本 1-2-3" 之类会被切碎。 */
+  var RE_DATE = /(?<![\d\-/.:])(?:\d{4}[-/.]\d{1,2}[-/.]\d{1,2}|(?:0?[1-9]|1[0-2])[-/.](?:0?[1-9]|[12]\d|3[01])(?![\d\-/.:])|\d{1,2}月\d{1,2}[日号]|(?:今|明|后|昨|前)天|(?:本|下|上|这)(?:周|星期)[一二三四五六日天]?|(?:周|星期|礼拜)[一二三四五六日天])/g;
   var RE_TIME = /\d{1,2}[:：]\d{2}(?:\s*[-~–—]\s*\d{1,2}[:：]\d{2})?|(?:上午|下午|中午|晚上|早上|凌晨|傍晚)\s*\d{1,2}\s*[点时](?:\s*\d{1,2}\s*分|\s*半)?|\d{1,2}\s*[点时](?:\s*\d{1,2}\s*分|\s*半)/g;
-  // 截止日期：ddl{任意内容}。花括号在渲染时被涂成透明，源码里保留。
-  var RE_DDL = /ddl\s*\{[^}\n]*\}/gi;
-  // 刚打完 ddl（还没补花括号）
-  var RE_DDL_TAIL = /(?:^|[^A-Za-z])ddl$/i;
+  /* 截止日期：ddl{任意内容}。花括号渲染时涂成透明，源码里保留。
+     两个容错：
+       · 未闭合 —— 用户边打边看，`ddl{11-1 11:3` 也该有红字提示；
+       · 重复花括号 —— 旧版本会自动补 {}，用户再打一个 { 就成了 ddl{{...}}，
+         整段仍要染色，不能因为多一层括号就失联。 */
+  var RE_DDL = /ddl\s*(\{+)[^}\n]*(\}*)/gi;
 
   var state = {
     notes: [],
@@ -57,7 +62,6 @@
     decoTimer: 0,
     pillRaf: 0,
     paletteFor: null,
-    ddlBusy: false,
     settings: {
       theme: 'system',
       fontSize: 14,
@@ -876,19 +880,27 @@
 
   /** 从一行自然语言里猜出提醒时间；猜不出就给「一小时后」。用户可在对话框里改。 */
   function parseWhen(line, now) {
-    var y = now.getFullYear(), mo = now.getMonth(), day = now.getDate();
-    var hasDate = false, hasTime = false, m;
+    // ddl{...} 里写的就是截止时间：整行可能有别的数字（题号、页码），
+    // 只盯着花括号里的内容解析才不会跑偏。
+    var dm = /ddl\s*\{+([^}\n]*)/i.exec(line || '');
+    var src = (dm && dm[1].trim()) ? dm[1] : (line || '');
 
-    if ((m = /(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/.exec(line))) {
-      y = +m[1]; mo = +m[2] - 1; day = +m[3]; hasDate = true;
-    } else if ((m = /(\d{1,2})月(\d{1,2})[日号]/.exec(line))) {
+    var y = now.getFullYear(), mo = now.getMonth(), day = now.getDate();
+    var hasDate = false, hasTime = false, hasYear = false, m;
+
+    if ((m = /(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/.exec(src))) {
+      y = +m[1]; mo = +m[2] - 1; day = +m[3]; hasDate = true; hasYear = true;
+    } else if ((m = /(?:0?[1-9]|1[0-2])[-/.](0?[1-9]|[12]\d|3[01])(?![\d\-/.:])/.exec(src))) {
+      // 11-1 / 11/1 / 11.1：不带年份，落在过去就当下一年
+      mo = parseInt(m[0], 10) - 1; day = +m[1]; hasDate = true;
+    } else if ((m = /(\d{1,2})月(\d{1,2})[日号]/.exec(src))) {
       mo = +m[1] - 1; day = +m[2]; hasDate = true;
-    } else if ((m = /(大后天|后天|明天|今天)/.exec(line))) {
+    } else if ((m = /(大后天|后天|明天|今天)/.exec(src))) {
       var off = { '今天': 0, '明天': 1, '后天': 2, '大后天': 3 }[m[1]];
       var t = new Date(y, mo, day + off);
       y = t.getFullYear(); mo = t.getMonth(); day = t.getDate();
       hasDate = true;
-    } else if ((m = /(?:周|星期|礼拜)([一二三四五六日天])/.exec(line))) {
+    } else if ((m = /(?:周|星期|礼拜)([一二三四五六日天])/.exec(src))) {
       var target = WEEKDAY[m[1]];
       var cur = new Date(y, mo, day).getDay();
       var diff = (target - cur + 7) % 7;
@@ -898,10 +910,15 @@
       hasDate = true;
     }
 
+    // 只写了月日：已经过去的日期按明年算（没人会给过去的日子设提醒）
+    if (hasDate && !hasYear && new Date(y, mo, day, 23, 59, 59).getTime() < now.getTime()) {
+      y += 1;
+    }
+
     var h = 9, mi = 0;
-    if ((m = /(上午|下午|中午|晚上|早上|凌晨|傍晚)?\s*(\d{1,2})\s*[:：]\s*(\d{2})/.exec(line))) {
+    if ((m = /(上午|下午|中午|晚上|早上|凌晨|傍晚)?\s*(\d{1,2})\s*[:：]\s*(\d{2})/.exec(src))) {
       h = applyPeriod(m[1], +m[2]); mi = +m[3]; hasTime = true;
-    } else if ((m = /(上午|下午|中午|晚上|早上|凌晨|傍晚)?\s*(\d{1,2})\s*[点时](半|\d{1,2}\s*分)?/.exec(line))) {
+    } else if ((m = /(上午|下午|中午|晚上|早上|凌晨|傍晚)?\s*(\d{1,2})\s*[点时](半|\d{1,2}\s*分)?/.exec(src))) {
       h = applyPeriod(m[1], +m[2]);
       mi = m[3] === '半' ? 30 : (m[3] ? parseInt(m[3], 10) : 0);
       hasTime = true;
@@ -927,7 +944,9 @@
     if (!node || node.nodeType !== 3) return null;
     var root = editorRoot();
     if (!root || !root.contains(node)) return null;
-    if (isSkipped(node, root) || inHeading(node)) return null;
+    if (isSkipped(node, root)) return null;
+    // 标题里写的时间同样可以建提醒：便签标题常常就是「英语作业 ddl{11-1 11:30}」，
+    // 不让它触发的话，这类便签就没有任何添加入口。
     return { node: node, offset: sel.anchorOffset };
   }
 
@@ -987,7 +1006,8 @@
     var el = node.parentElement;
     while (el && el.parentElement && el.parentElement !== root) el = el.parentElement;
     var t = el ? (el.textContent || '') : (node.nodeValue || '');
-    return t.replace(/\s+/g, ' ').trim();
+    // 标题的 textContent 带着 "# " 前缀（Vditor 的行首标记），提醒内容里不需要
+    return t.replace(/\s+/g, ' ').replace(/^#{1,6}\s*/, '').trim();
   }
 
   function openReminderDialog(hit) {
@@ -1047,7 +1067,10 @@
       if (dt === 'code-block' || dt === 'math-block') return true;
       if (e.classList) {
         if (e.classList.contains('katex') || e.classList.contains('katex-display')) return true;
-        if (e.classList.contains('vditor-ir__marker')) return true;
+        // 标题的 heading-id 标记里装的是用户写的正文（`# 作业 ddl{11-1 11:30}` 的
+        // 日期部分会被 Vditor 抽进这个 span），不能当语法标记跳过。
+        if (e.classList.contains('vditor-ir__marker') &&
+            e.getAttribute('data-type') !== 'heading-id') return true;
       }
       e = e.parentElement;
     }
@@ -1087,11 +1110,11 @@
     return false;
   }
 
-  /** 在一个文本节点内按优先级抓取日期 / 时间 / 地点区间。 */
-  function rangesInNode(node, bucket) {
+  /** 在一个文本节点内按优先级抓取日期 / 时间 / 地点区间。skip 是已被占用的区间。 */
+  function rangesInNode(node, bucket, skip) {
     var text = node.nodeValue;
     var cats = [['fn-place', RE_PLACE], ['fn-date', RE_DATE], ['fn-time', RE_TIME]];
-    var taken = [];
+    var taken = (skip || []).slice();
 
     for (var ci = 0; ci < cats.length; ci++) {
       var name = cats[ci][0], re = cats[ci][1];
@@ -1119,36 +1142,97 @@
     }
   }
 
-  /** 抓取 ddl{...} 截止日期。整段染色，花括号单独再染一层透明。 */
-  function ddlRangesInNode(node, main, braces) {
-    var text = node.nodeValue;
-    if (!text || text.indexOf('ddl') < 0 && text.indexOf('DDL') < 0) return;
+  /**
+   * 抓取 ddl{...} 截止日期。整段染色，花括号单独再染一层透明。
+   *
+   * 按「行块」而不是按文本节点匹配：Vditor IR 会把标题里的 {…} 抽进
+   * span[data-type=heading-id]，ddl 与它的花括号经常分居两个文本节点，
+   * 单节点正则永远匹配不上——这正是「标题里写了 ddl 却不红」的原因。
+   * 命中的区间写回 spanInNode，供日期/时间层跳过，免得红字底下再压一层蓝底。
+   */
+  function ddlRangesInBlock(el, main, braces, spanInNode) {
+    var parts = [], joined = '', n;
+    var walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null);
+    while ((n = walker.nextNode())) {
+      var v = n.nodeValue;
+      if (!v) continue;
+      if (isSkipped(n, el)) continue;
+      parts.push({ node: n, start: joined.length, text: v });
+      joined += v;
+    }
+    if (!parts.length || !/ddl/i.test(joined)) return;
+
     RE_DDL.lastIndex = 0;
     var m;
-    while ((m = RE_DDL.exec(text)) !== null) {
+    while ((m = RE_DDL.exec(joined)) !== null) {
+      if (!m[0]) { RE_DDL.lastIndex++; continue; }
       var s = m.index, e = m.index + m[0].length;
+
+      var a = locatePart(parts, s), b = locatePart(parts, e);
+      if (!a || !b) continue;
       try {
         var r = document.createRange();
-        r.setStart(node, s);
-        r.setEnd(node, e);
+        r.setStart(a.node, a.offset);
+        r.setEnd(b.node, b.offset);
         main.push(r);
+      } catch (err) { continue; }
 
-        var ob = text.indexOf('{', s);
-        if (ob >= 0 && ob < e) {
-          var rb = document.createRange();
-          rb.setStart(node, ob);
-          rb.setEnd(node, ob + 1);
-          braces.push(rb);
-        }
-        var cb = text.lastIndexOf('}', e);
-        if (cb >= s && cb < e) {
-          var rc = document.createRange();
-          rc.setStart(node, cb);
-          rc.setEnd(node, cb + 1);
-          braces.push(rc);
-        }
-      } catch (err) { }
+      // 前导的一组 { 全部透明
+      var ob = s + m[0].indexOf(m[1]);
+      pushBrace(parts, braces, ob, ob + m[1].length);
+      // 收尾的一组 } 全部透明
+      if (m[2]) pushBrace(parts, braces, e - m[2].length, e);
+
+      // 记录本节点内被 ddl 占用的区间
+      for (var i = 0; i < parts.length; i++) {
+        var p = parts[i];
+        var ps = Math.max(s, p.start), pe = Math.min(e, p.start + p.text.length);
+        if (pe <= ps) continue;
+        var arr = spanInNode.get(p.node);
+        if (!arr) { arr = []; spanInNode.set(p.node, arr); }
+        arr.push([ps - p.start, pe - p.start]);
+      }
     }
+  }
+
+  /** 把拼接文本的偏移量换算回「哪个文本节点 + 节点内偏移」。 */
+  function locatePart(parts, off) {
+    for (var i = 0; i < parts.length; i++) {
+      var p = parts[i];
+      if (off < p.start + p.text.length) return { node: p.node, offset: off - p.start };
+    }
+    var last = parts[parts.length - 1];
+    return last ? { node: last.node, offset: last.text.length } : null;
+  }
+
+  function pushBrace(parts, braces, s, e) {
+    if (e <= s) return;
+    var a = locatePart(parts, s), b = locatePart(parts, e);
+    if (!a || !b) return;
+    try {
+      var r = document.createRange();
+      r.setStart(a.node, a.offset);
+      r.setEnd(b.node, b.offset);
+      braces.push(r);
+    } catch (err) { }
+  }
+
+  /** 编辑器里可作为 ddl 匹配单位的行块。列表按 li 拆开，避免跨条误连。 */
+  function collectBlocks() {
+    var root = editorRoot();
+    if (!root) return [];
+    var out = [];
+    var kids = root.children;
+    for (var i = 0; i < kids.length; i++) {
+      var el = kids[i];
+      var tag = el.tagName;
+      if (tag === 'UL' || tag === 'OL') {
+        for (var j = 0; j < el.children.length; j++) out.push(el.children[j]);
+      } else {
+        out.push(el);
+      }
+    }
+    return out;
   }
 
   /**
@@ -1458,10 +1542,13 @@
     var bucket = { 'fn-date': [], 'fn-time': [], 'fn-place': [] };
     var ddl = [], brace = [];
     if (state.settings.autoHighlight) {
+      // ddl 按行块整体匹配（标题的 {} 会被拆进 heading-id 标记里）
+      var spanInNode = new Map();
+      collectBlocks().forEach(function (b) { ddlRangesInBlock(b, ddl, brace, spanInNode); });
+      // 日期 / 时间 / 地点仍按单节点：这些是点缀信息，跨节点匹配容易误伤
       nodes.forEach(function (n) {
         if (inHeading(n)) return;
-        rangesInNode(n, bucket);
-        ddlRangesInNode(n, ddl, brace);
+        rangesInNode(n, bucket, spanInNode.get(n));
       });
     }
     applyHighlight('fn-date', bucket['fn-date']);
@@ -1895,38 +1982,10 @@
       }, 40);
     });
 
-    // 打完 ddl 自动补一对花括号，并把光标停在括号中间
-    document.addEventListener('input', function () {
-      if (!state.vditor || state.suppress || state.ddlBusy) return;
-      var root = editorRoot();
-      if (!root) return;
-      var sel = window.getSelection();
-      if (!sel || sel.rangeCount === 0) return;
-      var r = sel.getRangeAt(0);
-      if (!r.collapsed) return;
-      var node = r.startContainer;
-      if (!node || node.nodeType !== 3 || !root.contains(node)) return;
-      // 注意不能直接 closest('pre')：编辑器根节点自己就是 pre.vditor-reset，
-      // 那样会把所有正文都排除掉。只排代码块与行内代码。
-      var pe = node.parentElement;
-      if (pe && (pe.closest('code') || pe.closest('[data-type="code-block"]') ||
-                 pe.closest('.vditor-ir__marker--pre'))) return;
-
-      var before = node.nodeValue.slice(0, r.startOffset);
-      if (!RE_DDL_TAIL.test(before)) return;
-      var after = node.nodeValue.slice(r.startOffset);
-      if (/^\s*\{/.test(after)) return;
-
-      state.ddlBusy = true;
-      setTimeout(function () {
-        try {
-          document.execCommand('insertText', false, '{}');
-          var s2 = window.getSelection();
-          if (s2 && s2.rangeCount) s2.modify('move', 'backward', 'character');
-        } catch (e) { }
-        state.ddlBusy = false;
-      }, 0);
-    }, true);
+    // 这里曾有一条「打完 ddl 自动补一对 {}」的便利逻辑，已移除：
+    // IR 模式重排 DOM 后光标位置不可靠，自动补的 {} 常常叠成 ddl{{...}}，
+    // 甚至把 } 挤到下一行，属于会弄脏正文的副作用。现在改成：
+    // 不打花括号也不影响——只要出现 ddl{ 就染色，宁可少管，不改内容。
 
     $('editor').addEventListener('scroll', onScrollLike, true);
     window.addEventListener('resize', function () { scheduleDecorate(160); });
@@ -2192,7 +2251,13 @@
       selectNote: selectNote,
       openSettings: openSettings,
       closeSettings: closeSettings,
-      renderSettings: renderSettings
+      renderSettings: renderSettings,
+      parseWhen: parseWhen,
+      whenMatches: whenMatches,
+      findRemindCandidate: findRemindCandidate,
+      ddlRangesInBlock: ddlRangesInBlock,
+      collectBlocks: collectBlocks,
+      rangesInNode: rangesInNode
     };
   }
 
