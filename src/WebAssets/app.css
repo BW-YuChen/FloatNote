@@ -665,11 +665,15 @@ body { user-select: none; }
 }
 
 /* 已完成任务：文字划线并淡化。
-   两个选择器各管一种 DOM 形态：Vditor 重排后 li 可能带 vditor-task--done 类，
-   也可能只是 input.checked 置位（:has 纯看 DOM，不依赖内核行为）。
-   只划本项直属文字（> p），嵌套的子任务不受牵连。 */
+   三层覆盖，适配不同 DOM 形态：
+   1. vditor-task--done 类 —— Lute 渲染勾选项时打的类，文字在直属 <p> 里
+   2. :has(> input:checked) > p —— 纯看实时 DOM（input 是 li 第一个子元素）
+   3. 文字若未包 <p> 而是直接挂在 li 下 —— 整条划线；
+      :not(:has(ul)) 保证有子任务嵌套时不殃及子任务 */
 .vditor-task--done > p,
-li.vditor-task:has(> input:checked) > p {
+li.vditor-task:has(> input:checked) > p,
+li.vditor-task--done:not(:has(ul)):not(:has(p)),
+li.vditor-task:has(input:checked):not(:has(ul)):not(:has(p)) {
   text-decoration: line-through;
   text-decoration-thickness: 1px;
   text-decoration-color: var(--fg-2);
